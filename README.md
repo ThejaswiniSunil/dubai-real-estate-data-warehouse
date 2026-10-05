@@ -36,15 +36,15 @@ The report has three pages:
 
 ### Executive Overview
 
-![Executive Overview](docs/screenshots/page1_executive.png)
+![Executive Overview](docs/screenshots/executive-overview.png)
 
 ### SCD Type 2: Area Zone History
 
-![SCD2 Area Zone History](docs/screenshots/page2_scd2.png)
+![SCD2 Area Zone History](docs/screenshots/scd2-history.png)
 
 ### Pipeline Health and Data Quality
 
-![Pipeline Health](docs/screenshots/page3_pipeline.png)
+![Pipeline Health](docs/screenshots/pipeline-health.png)
 ## Star schema
 
 ```mermaid
