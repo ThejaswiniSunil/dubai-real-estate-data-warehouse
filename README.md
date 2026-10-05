@@ -2,6 +2,17 @@
 
 An end-to-end analytics engineering project: raw property-transaction files go through a Python ETL pipeline into a dimensional **star schema** (with **SCD Type 2** history, **incremental loading** and automated **data quality checks**), and are then modelled and visualised in **Power BI**.
 
+## What this demonstrates
+
+- Dimensional data warehouse design using Kimball methodology
+- Python-based ETL with staging, validation and a reject table
+- Idempotent batch loads (re-running a load inserts 0 new rows)
+- SCD Type 2 historical dimension management with point-in-time joins
+- Automated data quality and reconciliation checks (11 per run)
+- SQL data modelling and reporting views
+- Power BI semantic modelling and DAX measures
+- Pipeline monitoring from audit tables (`etl_run_log`, `dq_log`)
+
 ## Architecture
 
 ```mermaid
@@ -15,7 +26,25 @@ flowchart LR
     G --> H[(Star schema<br/>SQL database)]
     H --> I[Power BI<br/>model, DAX, 5 report pages]
 ```
+## Power BI Report
 
+The report has three pages:
+
+- **Executive Overview:** transaction count, sales value, average price per sqm, year-over-year growth and monthly trend
+- **SCD Type 2 History:** areas that moved zones over time, showing sales under the zone that applied at the time of sale
+- **Pipeline Health:** ETL run history and data quality results
+
+### Executive Overview
+
+![Executive Overview](docs/screenshots/page1_executive.png)
+
+### SCD Type 2: Area Zone History
+
+![SCD2 Area Zone History](docs/screenshots/page2_scd2.png)
+
+### Pipeline Health and Data Quality
+
+![Pipeline Health](docs/screenshots/page3_pipeline.png)
 ## Star schema
 
 ```mermaid
