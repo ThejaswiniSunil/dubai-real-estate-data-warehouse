@@ -1,0 +1,7 @@
+pandas>=2.0
+numpy>=1.26
+sqlalchemy>=2.0
+# only if you target MySQL / PostgreSQL / SQL Server instead of the default SQLite:
+# pymysql
+# psycopg2-binary
+# pyodbc

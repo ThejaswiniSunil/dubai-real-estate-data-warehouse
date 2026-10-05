@@ -1,0 +1,103 @@
+// =====================================================================
+// Dubai Real Estate DW : DAX measures
+// Create a blank table called "_Measures" and add these there.
+// Model assumptions: fact_transactions[date_key] -> dim_date[date_key], and
+// dim_date is marked as the Date table (column full_date).
+// All measures count Sales only unless stated; change the filter to taste.
+// =====================================================================
+
+// ---------- Base ----------
+Total Transactions =
+CALCULATE ( COUNTROWS ( fact_transactions ), dim_transaction_type[txn_type] = "Sales" )
+
+Total Sales Value (AED) =
+CALCULATE ( SUM ( fact_transactions[transaction_value] ), dim_transaction_type[txn_type] = "Sales" )
+
+Total Area (sqm) =
+CALCULATE ( SUM ( fact_transactions[area_sqm] ), dim_transaction_type[txn_type] = "Sales" )
+
+// Weighted average: total value / total area (correct for mixed property sizes)
+Avg Price per sqm =
+DIVIDE ( [Total Sales Value (AED)], [Total Area (sqm)] )
+
+Avg Transaction Value =
+DIVIDE ( [Total Sales Value (AED)], [Total Transactions] )
+
+// ---------- Time intelligence ----------
+Sales Value PY =
+CALCULATE ( [Total Sales Value (AED)], SAMEPERIODLASTYEAR ( dim_date[full_date] ) )
+
+Sales Value YoY % =
+DIVIDE ( [Total Sales Value (AED)] - [Sales Value PY], [Sales Value PY] )
+
+Transactions PY =
+CALCULATE ( [Total Transactions], SAMEPERIODLASTYEAR ( dim_date[full_date] ) )
+
+Transactions YoY % =
+DIVIDE ( [Total Transactions] - [Transactions PY], [Transactions PY] )
+
+Sales Value YTD =
+TOTALYTD ( [Total Sales Value (AED)], dim_date[full_date] )
+
+Sales Value MoM % =
+VAR _prev = CALCULATE ( [Total Sales Value (AED)], DATEADD ( dim_date[full_date], -1, MONTH ) )
+RETURN DIVIDE ( [Total Sales Value (AED)] - _prev, _prev )
+
+// 12-month rolling average of price per sqm (smooths seasonality)
+Price per sqm 12M Rolling Avg =
+VAR _end = MAX ( dim_date[full_date] )
+RETURN
+    CALCULATE (
+        [Avg Price per sqm],
+        DATESINPERIOD ( dim_date[full_date], _end, -12, MONTH )
+    )
+
+// ---------- Share / ranking ----------
+Market Share % (Value) =
+DIVIDE (
+    [Total Sales Value (AED)],
+    CALCULATE ( [Total Sales Value (AED)], ALL ( dim_area ) )
+)
+
+Area Rank (by Value) =
+RANKX ( ALL ( dim_area[area_name] ), [Total Sales Value (AED)], , DESC, DENSE )
+
+Off-Plan Share % =
+DIVIDE (
+    CALCULATE ( [Total Transactions], dim_property[sale_stage] = "Off-Plan" ),
+    [Total Transactions]
+)
+
+Investor Share % =
+DIVIDE (
+    CALCULATE ( [Total Transactions], dim_buyer_type[buyer_type] = "Investor" ),
+    [Total Transactions]
+)
+
+// ---------- Mortgage view (ignores the Sales-only filter) ----------
+Mortgage Transactions =
+CALCULATE ( COUNTROWS ( fact_transactions ), dim_transaction_type[txn_type] = "Mortgage" )
+
+Mortgage Penetration % =
+DIVIDE ( [Mortgage Transactions], [Total Transactions] )
+
+// ---------- SCD2 demo: sales under the zone valid at time of sale ----------
+// Because fact rows point to the area_key valid on the sale date, slicing by
+// dim_area[zone] automatically shows history "as it was" (2025 vs 2026 zoning).
+Sales in Current Zone Only =
+CALCULATE ( [Total Sales Value (AED)], dim_area[is_current] = 1 )
+
+// ---------- Data quality card ----------
+DQ Checks Failed =
+CALCULATE ( COUNTROWS ( dq_log ), dq_log[status] = "FAIL" )
+
+Last Refresh Status =
+MAXX ( TOPN ( 1, etl_run_log, etl_run_log[started_at], DESC ), etl_run_log[status] )
+
+// ---------- Dynamic titles / formatting ----------
+Selected Period Title =
+"Dubai Property Market  |  " &
+IF ( HASONEVALUE ( dim_date[year_num] ), "FY " & SELECTEDVALUE ( dim_date[year_num] ), "All Years" )
+
+YoY Arrow =
+IF ( [Sales Value YoY %] >= 0, "▲ ", "▼ " ) & FORMAT ( ABS ( [Sales Value YoY %] ), "0.0%" )
